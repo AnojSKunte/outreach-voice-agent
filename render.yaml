@@ -1,0 +1,38 @@
+# Render blueprint — deploys Outreach as a single persistent web service.
+#
+# Why a Web Service (not a cron/worker/serverless function): a live phone call
+# holds a WebSocket open for the whole conversation, so we need a process that
+# stays connected. Render web services are persistent and support WebSockets
+# natively with no fixed timeout — the right fit.
+#
+# Secrets are NOT in this file. Set them in the Render dashboard (Environment),
+# or mark sync:false here so Render prompts for them at deploy time.
+
+services:
+  - type: web
+    name: outreach-voice-agent
+    runtime: python
+    plan: starter            # smallest always-on plan; bump as call volume grows
+    region: singapore        # closest Render region to India for lower latency
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    # Activated in milestone 3 once the server module lands:
+    startCommand: uvicorn outreach.server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHONPATH
+        value: src
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CARTESIA_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: LLM_MODEL
+        value: gpt-4o-mini
+      - key: DEFAULT_AGENT_ID
+        value: seaside-hotel

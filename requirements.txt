@@ -1,0 +1,12 @@
+# Core (used by config/registry — milestone 1)
+pydantic>=2.7,<3
+pydantic-settings>=2.3,<3
+PyYAML>=6.0,<7
+
+# Web server / telephony transport (milestone 3)
+fastapi>=0.111
+uvicorn[standard]>=0.30
+
+# NOTE: Pipecat + provider SDKs (Deepgram, OpenAI, Cartesia, Twilio) are added
+# in milestone 2 once the exact Pipecat 1.x package/extras are pinned against
+# its current docs. Kept out for now so the foundation installs cleanly.
