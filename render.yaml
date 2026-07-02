@@ -3,10 +3,11 @@
 # Why a Web Service (not a cron/worker/serverless function): a live phone call
 # holds a WebSocket open for the whole conversation, so we need a process that
 # stays connected. Render web services are persistent and support WebSockets
-# natively with no fixed timeout — the right fit.
+# natively with no fixed timeout. The campaign engine runs inside the same
+# process, so this one service is the entire product.
 #
-# Secrets are NOT in this file. Set them in the Render dashboard (Environment),
-# or mark sync:false here so Render prompts for them at deploy time.
+# Secrets are NOT in this file. Set them in the Render dashboard (Environment);
+# sync:false makes Render prompt for them at deploy time.
 
 services:
   - type: web
@@ -16,22 +17,50 @@ services:
     region: singapore        # closest Render region to India for lower latency
     branch: main
     buildCommand: pip install -r requirements.txt
-    # Activated in milestone 3 once the server module lands:
     startCommand: uvicorn outreach.server:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
+    # Persistent disk so the SQLite DB survives deploys. For real scale,
+    # drop the disk and point DATABASE_URL at a managed Postgres instead.
+    disk:
+      name: outreach-data
+      mountPath: /data
+      sizeGB: 1
     envVars:
       - key: PYTHONPATH
         value: src
+      - key: DATABASE_URL
+        value: sqlite:////data/outreach.db
+      # --- providers (set the ones for your profile; see .env.example) ---
       - key: DEEPGRAM_API_KEY
         sync: false
       - key: OPENAI_API_KEY
         sync: false
       - key: CARTESIA_API_KEY
         sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      # --- telephony ---
+      - key: TELEPHONY_PROVIDER
+        value: twilio
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN
         sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      # --- server ---
+      - key: PUBLIC_HOST
+        fromService:
+          type: web
+          name: outreach-voice-agent
+          property: host
+      - key: OUTREACH_API_KEY
+        generateValue: true   # Render generates a strong key; read it in the dashboard
+      # --- behaviour ---
+      - key: DEFAULT_PROFILE
+        value: premium
       - key: LLM_MODEL
         value: gpt-4o-mini
       - key: DEFAULT_AGENT_ID

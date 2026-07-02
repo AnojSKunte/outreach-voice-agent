@@ -27,3 +27,7 @@ Thumbs.db
 *.log
 recordings/
 *.wav
+
+# local SQLite database
+outreach.db
+*.db

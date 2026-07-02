@@ -1,12 +1,28 @@
-# Core (used by config/registry — milestone 1)
+# Core (config / agent registry / DB)
 pydantic>=2.7,<3
 pydantic-settings>=2.3,<3
 PyYAML>=6.0,<7
+SQLAlchemy>=2.0,<3
+loguru>=0.7
 
-# Web server / telephony transport (milestone 3)
+# Web server / API / telephony transport
 fastapi>=0.111
 uvicorn[standard]>=0.30
+python-multipart>=0.0.9     # CSV upload endpoint
+httpx>=0.27                 # outbound webhooks
+requests>=2.31              # Exotel REST
 
-# NOTE: Pipecat + provider SDKs (Deepgram, OpenAI, Cartesia, Twilio) are added
-# in milestone 2 once the exact Pipecat 1.x package/extras are pinned against
-# its current docs. Kept out for now so the foundation installs cleanly.
+# Voice pipeline: Pipecat 1.x + the provider integrations we use.
+#   deepgram -> premium STT, cartesia -> premium TTS, openai -> LLM (+ Groq
+#   via its OpenAI-compatible endpoint), sarvam -> budget STT/TTS (India:
+#   Hindi/Hinglish), elevenlabs -> optional premium TTS, silero -> on-device
+#   VAD for turn-taking/barge-in, websocket -> FastAPIWebsocketTransport for
+#   Twilio/Exotel media streams.
+# For Gemini as the budget LLM also: pip install "pipecat-ai[google]"
+pipecat-ai[cartesia,deepgram,openai,silero,websocket,sarvam,elevenlabs]>=1.0,<2
+
+# Twilio REST (dial-out, AMD, transfer, auto-hangup)
+twilio>=9.0
+
+# Post-call analysis + local chat test harness (OpenAI-compatible clients)
+openai>=1.30
