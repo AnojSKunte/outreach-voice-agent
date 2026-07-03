@@ -1,67 +1,47 @@
-# Render blueprint — deploys Outreach as a single persistent web service.
+# Render blueprint — one-click deploy (currently FREE tier for demo).
 #
-# Why a Web Service (not a cron/worker/serverless function): a live phone call
-# holds a WebSocket open for the whole conversation, so we need a process that
-# stays connected. Render web services are persistent and support WebSockets
-# natively with no fixed timeout. The campaign engine runs inside the same
-# process, so this one service is the entire product.
+# FREE TIER NOTES:
+#  * The service sleeps after ~15 min idle; first request after that takes
+#    ~1 min to wake. Open the dashboard URL to wake it BEFORE a test call.
+#  * No persistent disk on free: the SQLite DB resets on each deploy/restart.
+#    Fine for demos.
 #
-# Secrets are NOT in this file. Set them in the Render dashboard (Environment);
-# sync:false makes Render prompt for them at deploy time.
+# GOING TO PRODUCTION (later): change plan to `starter`, uncomment the disk
+# block (or set DATABASE_URL to a managed Postgres), and redeploy.
+#
+# Secrets (GROQ_API_KEY, SARVAM_API_KEY, TWILIO_*, etc.) are added in the
+# Render dashboard: your service -> Environment -> Add Environment Variable.
+# The full list of supported vars is in .env.example.
 
 services:
   - type: web
     name: outreach-voice-agent
     runtime: python
-    plan: starter            # smallest always-on plan; bump as call volume grows
-    region: singapore        # closest Render region to India for lower latency
+    plan: free
+    region: singapore        # closest Render region to India
     branch: main
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn outreach.server:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-    # Persistent disk so the SQLite DB survives deploys. For real scale,
-    # drop the disk and point DATABASE_URL at a managed Postgres instead.
-    disk:
-      name: outreach-data
-      mountPath: /data
-      sizeGB: 1
+    # --- production upgrade (uncomment when moving off free) ---
+    # plan: starter
+    # disk:
+    #   name: outreach-data
+    #   mountPath: /data
+    #   sizeGB: 1
     envVars:
       - key: PYTHONPATH
         value: src
-      - key: DATABASE_URL
-        value: sqlite:////data/outreach.db
-      # --- providers (set the ones for your profile; see .env.example) ---
-      - key: DEEPGRAM_API_KEY
-        sync: false
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: CARTESIA_API_KEY
-        sync: false
-      - key: SARVAM_API_KEY
-        sync: false
-      - key: GROQ_API_KEY
-        sync: false
-      # --- telephony ---
-      - key: TELEPHONY_PROVIDER
-        value: twilio
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_FROM_NUMBER
-        sync: false
-      # --- server ---
       - key: PUBLIC_HOST
         fromService:
           type: web
           name: outreach-voice-agent
           property: host
       - key: OUTREACH_API_KEY
-        generateValue: true   # Render generates a strong key; read it in the dashboard
-      # --- behaviour ---
+        generateValue: true   # strong key auto-generated; view it in Environment tab
       - key: DEFAULT_PROFILE
-        value: premium
-      - key: LLM_MODEL
-        value: gpt-4o-mini
+        value: budget         # Sarvam + Groq (free-credit stack); switch to premium later
+      - key: BUDGET_LLM_MODEL
+        value: llama-3.3-70b-versatile
       - key: DEFAULT_AGENT_ID
-        value: seaside-hotel
+        value: marketplace-support
