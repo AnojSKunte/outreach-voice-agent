@@ -32,8 +32,6 @@ CHECKS = [
     ("pipecat.serializers.twilio", "TwilioFrameSerializer"),
     ("pipecat.serializers.exotel", "ExotelFrameSerializer"),
     ("pipecat.runner.utils", "parse_telephony_websocket"),
-    # Transcript capture:
-    ("pipecat.processors.transcript_processor", "TranscriptProcessor"),
     # Budget profile (Sarvam = India Hindi/Hinglish STT+TTS):
     ("pipecat.services.sarvam.stt", "SarvamSTTService"),
     ("pipecat.services.sarvam.tts", "SarvamTTSService"),

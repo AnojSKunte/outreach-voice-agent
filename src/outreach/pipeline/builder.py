@@ -3,17 +3,19 @@
 This is the heart of the runtime: given a resolved agent and a Pipecat
 transport (telephony in production, or a local/test transport), it builds the
 STT -> LLM -> TTS pipeline for the agent's provider profile, wires the
-agent's permitted tools, captures the transcript, and returns a ready-to-run
-:class:`VoiceSession`.
+agent's permitted tools, and returns a ready-to-run :class:`VoiceSession`.
 
 Provider choices come from ``outreach.providers`` (premium/budget profiles
 with per-agent overrides), so swapping vendors is configuration, not code.
+
+Transcripts: rather than a dedicated processor (removed in Pipecat 1.x), the
+conversation is read back from the ``LLMContext`` after the call — the
+context aggregators keep it in sync with what was actually said.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger
@@ -29,7 +31,6 @@ from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
     LLMUserAggregatorParams,
 )
-from pipecat.processors.transcript_processor import TranscriptProcessor
 
 from outreach.agents.schema import AgentConfig
 from outreach.config import Settings, get_settings
@@ -45,13 +46,35 @@ class VoiceSession:
     task: PipelineTask
     context: LLMContext
     profile: str
-    # Filled live during the call: [{"role","content","t"}, ...]
-    transcript: list[dict[str, Any]] = field(default_factory=list)
 
     async def run(self) -> None:
         """Run the pipeline to completion (until the transport disconnects)."""
         runner = PipelineRunner(handle_sigint=False)
         await runner.run(self.task)
+
+    def snapshot_transcript(self) -> list[dict[str, Any]]:
+        """Extract the user/assistant conversation from the LLM context."""
+        out: list[dict[str, Any]] = []
+        try:
+            messages = self.context.get_messages()
+        except Exception:  # pragma: no cover — context API drift safety net
+            logger.exception("could not read messages from LLMContext")
+            return out
+        for m in messages:
+            if not isinstance(m, dict):
+                continue
+            role = m.get("role")
+            content = m.get("content")
+            if role not in ("user", "assistant") or not content:
+                continue
+            if isinstance(content, list):  # multi-part content
+                content = " ".join(
+                    str(p.get("text", "")) for p in content if isinstance(p, dict)
+                )
+            content = str(content).strip()
+            if content:
+                out.append({"role": role, "content": content})
+        return out
 
 
 def build_voice_session(
@@ -89,20 +112,15 @@ def build_voice_session(
         user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
     )
 
-    # --- Transcript capture (persisted by the call lifecycle service) ---
-    transcript_proc = TranscriptProcessor()
-
     pipeline = Pipeline(
         [
-            transport.input(),            # caller audio in
-            bundle.stt,                   # speech -> text
-            transcript_proc.user(),       # record caller turns
-            aggregators.user(),           # add user turn to context
-            bundle.llm,                   # reason + maybe call a tool
-            bundle.tts,                   # text -> speech
-            transport.output(),           # audio back to caller
-            transcript_proc.assistant(),  # record what was actually said
-            aggregators.assistant(),
+            transport.input(),        # caller audio in
+            bundle.stt,               # speech -> text
+            aggregators.user(),       # add user turn to context
+            bundle.llm,               # reason + maybe call a tool
+            bundle.tts,               # text -> speech
+            transport.output(),       # audio back to caller
+            aggregators.assistant(),  # record what was actually said
         ]
     )
 
@@ -117,18 +135,6 @@ def build_voice_session(
     session = VoiceSession(
         agent=agent, task=task, context=context, profile=bundle.profile
     )
-
-    @transcript_proc.event_handler("on_transcript_update")
-    async def _on_transcript(_proc, frame):  # pragma: no cover - runtime glue
-        for msg in frame.messages:
-            session.transcript.append(
-                {
-                    "role": msg.role,
-                    "content": msg.content,
-                    "t": getattr(msg, "timestamp", None)
-                    or datetime.now(timezone.utc).isoformat(),
-                }
-            )
 
     # --- First words on the call ---
     p = agent.persona
@@ -145,13 +151,6 @@ def build_voice_session(
             # it so the model's history matches what the caller heard.
             await task.queue_frames([TTSSpeakFrame(first_line)])
             context.add_message({"role": "assistant", "content": first_line})
-            session.transcript.append(
-                {
-                    "role": "assistant",
-                    "content": first_line,
-                    "t": datetime.now(timezone.utc).isoformat(),
-                }
-            )
         else:
             hint = (
                 "The callee just answered your outbound call. Open the "

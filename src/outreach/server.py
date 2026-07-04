@@ -223,7 +223,8 @@ async def media_ws(websocket: WebSocket) -> None:
     finally:
         if call_id:
             # Persist transcript + duration, run analysis, update lead, webhooks.
-            await asyncio.to_thread(call_service.finalize_call, call_id, session.transcript, status)
+            transcript = session.snapshot_transcript()
+            await asyncio.to_thread(call_service.finalize_call, call_id, transcript, status)
 
 
 # ----------------------------------------------------------------------
