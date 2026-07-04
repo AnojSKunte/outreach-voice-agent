@@ -32,11 +32,10 @@ services:
     envVars:
       - key: PYTHONPATH
         value: src
-      - key: PUBLIC_HOST
-        fromService:
-          type: web
-          name: outreach-voice-agent
-          property: host
+      # PUBLIC_HOST is intentionally NOT set here: the code falls back to
+      # RENDER_EXTERNAL_HOSTNAME, which Render injects with the real public
+      # hostname. (fromService host returns the internal name — wrong for
+      # telephony webhooks/websockets.)
       - key: OUTREACH_API_KEY
         generateValue: true   # strong key auto-generated; view it in Environment tab
       - key: DEFAULT_PROFILE

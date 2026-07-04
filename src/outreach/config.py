@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -68,7 +68,10 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Server / API
     # ------------------------------------------------------------------
-    public_host: str | None = Field(default=None, alias="PUBLIC_HOST")
+    public_host: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("PUBLIC_HOST", "RENDER_EXTERNAL_HOSTNAME"),
+    )
     port: int = Field(default=8000, alias="PORT")
     # Shared secret for the REST API (X-API-Key header). If unset, the API
     # is open — fine locally, never in production.

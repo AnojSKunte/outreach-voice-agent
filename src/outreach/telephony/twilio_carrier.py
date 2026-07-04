@@ -108,7 +108,10 @@ class TwilioCarrier(Carrier):
             call = self.client.calls.create(**kwargs)
         except Exception as exc:  # twilio.base.exceptions.TwilioRestException etc.
             raise TelephonyError(f"Twilio dial-out to {to_number} failed: {exc}") from exc
-        logger.info(f"originated call {call_id} -> {to_number} (twilio sid {call.sid})")
+        logger.info(
+            f"originated call {call_id} -> {to_number} (twilio sid {call.sid}); "
+            f"media stream target wss://{host}/ws"
+        )
         return call.sid
 
     def hangup(self, provider_call_id: str) -> None:
