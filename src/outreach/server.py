@@ -311,3 +311,62 @@ async def telephony_amd(request: Request, call_id: str = "") -> dict:
     if call_id:
         await asyncio.to_thread(call_service.handle_missed_outbound, call_id, "voicemail")
     return {"ok": True}
+
+
+# ----------------------------------------------------------------------
+# TEMPORARY remote diagnostics (keyed). Lets an operator read recent logs
+# and trigger a test dial without shell access. Remove before selling.
+# ----------------------------------------------------------------------
+
+from collections import deque as _deque
+
+_LOG_BUFFER: "_deque[str]" = _deque(maxlen=500)
+logger.add(lambda m: _LOG_BUFFER.append(str(m)), level="INFO")
+
+
+def _debug_auth(key: str) -> None:
+    from fastapi import HTTPException
+
+    expected = get_settings().outreach_api_key
+    if expected and key != expected:
+        raise HTTPException(401, "bad key")
+
+
+@app.get("/debug/logs")
+def debug_logs(key: str = "", n: int = 200) -> PlainTextResponse:
+    _debug_auth(key)
+    lines = list(_LOG_BUFFER)[-max(1, min(n, 500)):]
+    return PlainTextResponse("".join(lines) or "(log buffer empty)")
+
+
+@app.get("/debug/calls")
+def debug_calls(key: str = "", limit: int = 10) -> dict:
+    _debug_auth(key)
+    from sqlalchemy import select
+
+    from outreach.db.models import Call
+    from outreach.db.session import session_scope
+
+    with session_scope() as s:
+        rows = list(
+            s.scalars(select(Call).order_by(Call.created_at.desc()).limit(limit))
+        )
+        return {"calls": [c.as_dict(include_transcript=True) for c in rows]}
+
+
+@app.get("/debug/dial")
+async def debug_dial(key: str = "", phone: str = "") -> dict:
+    _debug_auth(key)
+    if not phone:
+        return {"error": "pass ?phone=+E164"}
+    from outreach.db.models import Lead
+    from outreach.db.session import session_scope
+    from outreach.campaigns import dial_lead
+
+    with session_scope() as s:
+        lead = Lead(phone=phone, name="Debug Test", status="queued")
+        s.add(lead)
+        s.flush()
+        lead_id = lead.id
+    call_id = await asyncio.to_thread(dial_lead, lead_id)
+    return {"call_id": call_id, "lead_id": lead_id}
