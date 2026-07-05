@@ -42,6 +42,47 @@ def registry():
     return _registry
 
 
+
+def _warmup_voice_stack() -> None:
+    """Import + initialize the heavy voice deps once, at boot.
+
+    On small instances these imports take 20-60s; doing them lazily meant the
+    FIRST call sat in silence while Python imported pipecat/onnx. After this
+    runs, per-call setup is fast.
+    """
+    try:
+        from pipecat.audio.vad.silero import SileroVADAnalyzer
+        from pipecat.runner.utils import parse_telephony_websocket  # noqa: F401
+        from pipecat.serializers.twilio import TwilioFrameSerializer  # noqa: F401
+
+        try:
+            from pipecat.transports.websocket.fastapi import (  # noqa: F401
+                FastAPIWebsocketTransport,
+            )
+        except ImportError:
+            from pipecat.transports.network.fastapi_websocket import (  # noqa: F401
+                FastAPIWebsocketTransport,
+            )
+        # Provider service modules used by the profiles (best-effort).
+        for mod in (
+            "pipecat.services.sarvam.stt",
+            "pipecat.services.sarvam.tts",
+            "pipecat.services.openai.llm",
+            "pipecat.services.deepgram.stt",
+            "pipecat.services.cartesia.tts",
+        ):
+            try:
+                __import__(mod)
+            except Exception:  # noqa: BLE001 — optional extras may be absent
+                pass
+        import outreach.pipeline.builder  # noqa: F401
+
+        SileroVADAnalyzer()  # loads + caches the VAD model
+        logger.info("voice stack warmed up")
+    except Exception:  # noqa: BLE001 — server must still boot for dashboard/API
+        logger.exception("voice stack warmup failed (calls may be slow/broken)")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _stop_event
@@ -54,7 +95,8 @@ async def lifespan(app: FastAPI):
 
     _stop_event = asyncio.Event()
     engine_task = asyncio.create_task(run_campaign_loop(_stop_event))
-    logger.info("outreach server up")
+    logger.info("outreach server up; warming voice stack...")
+    await asyncio.to_thread(_warmup_voice_stack)
     yield
     _stop_event.set()
     await engine_task
