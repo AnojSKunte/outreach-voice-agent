@@ -44,3 +44,5 @@ services:
         value: llama-3.3-70b-versatile
       - key: DEFAULT_AGENT_ID
         value: marketplace-support
+      - key: AMD_ENABLED
+        value: "false"    # Twilio trial notice confuses AMD; enable on a paid account

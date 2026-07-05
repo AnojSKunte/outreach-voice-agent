@@ -106,12 +106,15 @@ def dial_lead(lead_id: str, campaign_id: str | None = None) -> str:
         # misconfigured deployment produces visible 'failed' calls with a
         # clear error (and normal retry/backoff) instead of a hot loop.
         carrier = get_carrier()
+        from outreach.config import get_settings as _gs
+
         provider_id = carrier.originate_call(
             phone,
             agent_id=agent_id,
             call_id=call_id,
             lead_id=lead_id,
             campaign_id=camp_id,
+            detect_voicemail=_gs().amd_enabled,
         )
         call_service.set_provider_call_id(call_id, provider_id)
     except (TelephonyError, RuntimeError) as exc:

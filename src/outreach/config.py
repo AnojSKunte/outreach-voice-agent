@@ -88,6 +88,10 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Call guardrails
     # ------------------------------------------------------------------
+    # Answering-machine detection on outbound calls. Keep FALSE on Twilio
+    # trial accounts: the trial announcement makes AMD classify every
+    # answered call as a machine and hang up.
+    amd_enabled: bool = Field(default=True, alias="AMD_ENABLED")
     max_call_seconds: int = Field(default=600, alias="MAX_CALL_SECONDS")
     # Hang up after this many seconds of silence from the caller.
     idle_timeout_seconds: int = Field(default=30, alias="IDLE_TIMEOUT_SECONDS")
