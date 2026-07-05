@@ -332,15 +332,15 @@ def _debug_auth(key: str) -> None:
         raise HTTPException(401, "bad key")
 
 
-@app.get("/debug/{key}/logs")
-def debug_logs(key: str) -> PlainTextResponse:
+@app.get("/debug/{key}/logs/{nonce}")
+def debug_logs(key: str, nonce: str) -> PlainTextResponse:
     _debug_auth(key)
     lines = list(_LOG_BUFFER)[-250:]
     return PlainTextResponse("".join(lines) or "(log buffer empty)")
 
 
-@app.get("/debug/{key}/calls")
-def debug_calls(key: str) -> dict:
+@app.get("/debug/{key}/calls/{nonce}")
+def debug_calls(key: str, nonce: str) -> dict:
     _debug_auth(key)
     from sqlalchemy import select
 
