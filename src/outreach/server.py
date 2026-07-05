@@ -332,15 +332,15 @@ def _debug_auth(key: str) -> None:
         raise HTTPException(401, "bad key")
 
 
-@app.get("/debug/logs")
-def debug_logs(key: str = "", n: int = 200) -> PlainTextResponse:
+@app.get("/debug/{key}/logs")
+def debug_logs(key: str) -> PlainTextResponse:
     _debug_auth(key)
-    lines = list(_LOG_BUFFER)[-max(1, min(n, 500)):]
+    lines = list(_LOG_BUFFER)[-250:]
     return PlainTextResponse("".join(lines) or "(log buffer empty)")
 
 
-@app.get("/debug/calls")
-def debug_calls(key: str = "", limit: int = 10) -> dict:
+@app.get("/debug/{key}/calls")
+def debug_calls(key: str) -> dict:
     _debug_auth(key)
     from sqlalchemy import select
 
@@ -349,16 +349,16 @@ def debug_calls(key: str = "", limit: int = 10) -> dict:
 
     with session_scope() as s:
         rows = list(
-            s.scalars(select(Call).order_by(Call.created_at.desc()).limit(limit))
+            s.scalars(select(Call).order_by(Call.created_at.desc()).limit(8))
         )
         return {"calls": [c.as_dict(include_transcript=True) for c in rows]}
 
 
-@app.get("/debug/dial")
-async def debug_dial(key: str = "", phone: str = "") -> dict:
+@app.get("/debug/{key}/dial/{phone_digits}")
+async def debug_dial(key: str, phone_digits: str) -> dict:
+    """Dial +<phone_digits> (digits only in the path; '+' is implied)."""
     _debug_auth(key)
-    if not phone:
-        return {"error": "pass ?phone=+E164"}
+    phone = "+" + "".join(ch for ch in phone_digits if ch.isdigit())
     from outreach.db.models import Lead
     from outreach.db.session import session_scope
     from outreach.campaigns import dial_lead
@@ -369,4 +369,4 @@ async def debug_dial(key: str = "", phone: str = "") -> dict:
         s.flush()
         lead_id = lead.id
     call_id = await asyncio.to_thread(dial_lead, lead_id)
-    return {"call_id": call_id, "lead_id": lead_id}
+    return {"call_id": call_id, "lead_id": lead_id, "phone": phone}
