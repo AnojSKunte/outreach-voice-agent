@@ -354,8 +354,8 @@ def debug_calls(key: str, nonce: str) -> dict:
         return {"calls": [c.as_dict(include_transcript=True) for c in rows]}
 
 
-@app.get("/debug/{key}/dial/{phone_digits}")
-async def debug_dial(key: str, phone_digits: str) -> dict:
+@app.get("/debug/{key}/dial/{phone_digits}/{nonce}")
+async def debug_dial(key: str, phone_digits: str, nonce: str) -> dict:
     """Dial +<phone_digits> (digits only in the path; '+' is implied)."""
     _debug_auth(key)
     phone = "+" + "".join(ch for ch in phone_digits if ch.isdigit())
