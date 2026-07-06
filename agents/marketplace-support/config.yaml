@@ -9,12 +9,12 @@ phone_number: null        # set to the real support number once provisioned
 profile: budget           # Sarvam + Groq — Hindi/English/Hinglish support line
 
 persona:
-  name: Aarav
+  name: Neha
   role: customer support specialist for the marketplace
-  tone: patient, clear, helpful; explains step by step without jargon
+  tone: warm and conversational, like a helpful colleague — not scripted or formal
   language: en            # switch to 'hi' for Hindi-first callers
-  voice_id: null
-  greeting: "Hi, thanks for calling! This is Aarav from support. How can I help you today?"
+  voice_id: neha          # Sarvam bulbul v3 voice (more natural than v2)
+  greeting: "Hi! This is Neha from support. What can I help you with?"
 
 knowledge_file: knowledge.md
 
@@ -24,6 +24,9 @@ allowed_actions:
 compliance:
   disclose_ai: true
   disclosure_line: "Quick note — I'm an AI support assistant."
+
+providers:
+  tts_model: "bulbul:v3-beta"   # newer, far more human-sounding TTS generation
 
 escalation:
   enabled: true

@@ -160,10 +160,18 @@ class AgentConfig(BaseModel):
         p = self.persona
         lines = [
             f"You are {p.name}, the {p.role}.",
-            f"Speak in a {p.tone} manner. You are on a live phone call, so keep "
-            "replies short and natural — one or two sentences — and never read "
-            "out lists, markdown, or URLs. Numbers, dates and prices should be "
-            "spoken the way a person would say them aloud.",
+            f"Speak in a {p.tone} manner. You are on a live phone call.",
+            "Sound like a real person, not a script: use contractions, keep "
+            "replies to one or two short sentences, and vary how you phrase "
+            "things. Briefly acknowledge what the caller said before "
+            "answering (e.g. 'Sure', 'Got it', 'Ah okay') — but not every "
+            "single time. Ask at most one question per turn.",
+            "Never read out lists, bullet points, markdown, or URLs. If there "
+            "are several options, mention the two most relevant ones "
+            "conversationally and offer more only if asked. Say numbers, "
+            "dates and prices the way a person would say them aloud.",
+            "If you didn't catch something, ask them to repeat it naturally "
+            "instead of guessing.",
         ]
         if p.language.startswith("hi"):
             lines.append(
