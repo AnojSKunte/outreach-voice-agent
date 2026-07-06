@@ -163,7 +163,17 @@ async def inbound_twiml(request: Request) -> PlainTextResponse:
 
 @app.websocket("/ws")
 async def media_ws(websocket: WebSocket) -> None:
+    logger.info("ws: incoming media stream connection")
+    try:
+        await _media_ws_inner(websocket)
+    except Exception:
+        logger.exception("ws handler crashed")
+        raise
+
+
+async def _media_ws_inner(websocket: WebSocket) -> None:
     await websocket.accept()
+    logger.info("ws: handshake accepted, parsing start message")
 
     # Heavy imports deferred to call time so the API/dashboard work without
     # voice deps installed (and boot stays fast).
@@ -364,6 +374,24 @@ from collections import deque as _deque
 
 _LOG_BUFFER: "_deque[str]" = _deque(maxlen=500)
 logger.add(lambda m: _LOG_BUFFER.append(str(m)), level="INFO")
+
+import logging as _logging
+
+
+class _InterceptHandler(_logging.Handler):
+    def emit(self, record: _logging.LogRecord) -> None:  # pragma: no cover
+        try:
+            logger.opt(exception=record.exc_info).log(
+                record.levelname if record.levelname in ("INFO", "WARNING", "ERROR", "CRITICAL") else "INFO",
+                f"[{record.name}] {record.getMessage()}",
+            )
+        except Exception:
+            pass
+
+
+for _name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi"):
+    _lg = _logging.getLogger(_name)
+    _lg.addHandler(_InterceptHandler())
 
 
 def _debug_auth(key: str) -> None:
