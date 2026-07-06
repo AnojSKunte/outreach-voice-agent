@@ -116,6 +116,12 @@ def dashboard() -> FileResponse:
     return FileResponse(_DASHBOARD, media_type="text/html")
 
 
+@app.get("/test")
+def browser_test() -> FileResponse:
+    """Talk to any agent from the browser — same /ws pipeline as a phone call."""
+    return FileResponse(_DASHBOARD.parent / "test.html", media_type="text/html")
+
+
 # ----------------------------------------------------------------------
 # inbound calls (Twilio webhook -> TwiML pointing at /ws)
 # ----------------------------------------------------------------------
