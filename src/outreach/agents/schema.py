@@ -172,6 +172,8 @@ class AgentConfig(BaseModel):
             "dates and prices the way a person would say them aloud.",
             "If you didn't catch something, ask them to repeat it naturally "
             "instead of guessing.",
+            "Keep every reply under about thirty words unless the caller "
+            "explicitly asks for a detailed walkthrough.",
         ]
         if p.language.startswith("hi"):
             lines.append(

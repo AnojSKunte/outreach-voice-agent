@@ -198,7 +198,7 @@ async def _media_ws_inner(websocket: WebSocket) -> None:
         )
     from pipecat.audio.vad.silero import SileroVADAnalyzer
 
-    from outreach.pipeline.builder import build_voice_session
+    from outreach.pipeline.builder import build_voice_session, make_vad
 
     settings = get_settings()
 
@@ -240,7 +240,7 @@ async def _media_ws_inner(websocket: WebSocket) -> None:
             audio_in_enabled=True,
             audio_out_enabled=True,
             add_wav_header=False,
-            vad_analyzer=SileroVADAnalyzer(),
+            vad_analyzer=make_vad(),
             serializer=serializer,
         ),
     )

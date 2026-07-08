@@ -22,6 +22,7 @@ from loguru import logger
 
 # --- Pipecat imports (heavy; only loaded when building a session) ---
 from pipecat.audio.vad.silero import SileroVADAnalyzer
+from pipecat.audio.vad.vad_analyzer import VADParams
 from pipecat.frames.frames import LLMRunFrame, TTSSpeakFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
@@ -36,6 +37,14 @@ from outreach.agents.schema import AgentConfig
 from outreach.config import Settings, get_settings
 from outreach.pipeline.tools import build_tools_schema, register_actions
 from outreach.providers.profiles import build_services
+
+
+def make_vad() -> SileroVADAnalyzer:
+    """Tuned VAD: responsive turn-taking without cutting callers off
+    mid-pause. Shared by the transport and the context aggregator."""
+    return SileroVADAnalyzer(
+        params=VADParams(confidence=0.7, start_secs=0.2, stop_secs=0.3)
+    )
 
 
 @dataclass
@@ -109,7 +118,7 @@ def build_voice_session(
     context = LLMContext(tools=tools)
     aggregators = LLMContextAggregatorPair(
         context,
-        user_params=LLMUserAggregatorParams(vad_analyzer=SileroVADAnalyzer()),
+        user_params=LLMUserAggregatorParams(vad_analyzer=make_vad()),
     )
 
     pipeline = Pipeline(

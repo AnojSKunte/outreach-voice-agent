@@ -160,7 +160,11 @@ def _build_budget(agent: AgentConfig, system_prompt: str, settings: Settings) ->
         api_key=settings.sarvam_api_key,
         voice_id=agent.persona.voice_id or _DEFAULT_SARVAM_VOICE,
         model=ov.tts_model or "bulbul:v2",
-        params=SarvamTTSService.InputParams(language=sarvam_lang),
+        params=SarvamTTSService.InputParams(
+            language=sarvam_lang,
+            # Lower temperature = steadier prosody on v3 (ignored by v2).
+            temperature=0.4,
+        ),
     )
 
     # LLM: Groq's OpenAI-compatible endpoint (fast + near-free), falling back
@@ -175,6 +179,9 @@ def _build_budget(agent: AgentConfig, system_prompt: str, settings: Settings) ->
             settings=OpenAILLMService.Settings(
                 model=llm_model,
                 system_instruction=system_prompt,
+                # Short replies = lower time-to-full-response on a live call.
+                max_tokens=200,
+                temperature=0.6,
             ),
         )
         llm_name = f"groq/{llm_model}"
