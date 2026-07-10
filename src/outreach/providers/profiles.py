@@ -326,7 +326,11 @@ def _build_auto(agent: AgentConfig, system_prompt: str, settings: Settings) -> S
     elif "sonic" in hint or "cartesia" in hint:
         order = ["cartesia"]
     else:
-        order = ["sarvam", "elevenlabs", "cartesia"] if hindi else ["elevenlabs", "cartesia", "sarvam"]
+        # Sarvam first by default: unlimited free-credit voice. Premium TTS
+        # (ElevenLabs/Cartesia) is OPT-IN per agent via providers.tts_model,
+        # so limited free-tier credits are only spent when explicitly chosen
+        # (e.g. for a sales demo).
+        order = ["sarvam", "elevenlabs", "cartesia"]
 
     tts = None
     for choice in order:
