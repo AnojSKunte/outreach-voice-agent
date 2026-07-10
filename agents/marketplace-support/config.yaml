@@ -6,7 +6,7 @@ agent_id: marketplace-support
 client_name: Open Marketplace
 phone_number: null        # set to the real support number once provisioned
 
-profile: budget           # Sarvam + Groq — Hindi/English/Hinglish support line
+profile: auto             # best stack from available keys (auto-upgrades as keys are added)
 
 persona:
   name: Neha
@@ -24,9 +24,6 @@ allowed_actions:
 compliance:
   disclose_ai: true
   disclosure_line: "Quick note — I'm an AI support assistant."
-
-providers:
-  tts_model: "bulbul:v3-beta"   # newer, far more human-sounding TTS generation
 
 escalation:
   enabled: true

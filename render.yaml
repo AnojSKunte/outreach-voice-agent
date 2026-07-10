@@ -39,7 +39,7 @@ services:
       - key: OUTREACH_API_KEY
         generateValue: true   # strong key auto-generated; view it in Environment tab
       - key: DEFAULT_PROFILE
-        value: budget         # Sarvam + Groq (free-credit stack); switch to premium later
+        value: auto           # best stack auto-assembled from available keys
       - key: BUDGET_LLM_MODEL
         value: llama-3.3-70b-versatile
       - key: DEFAULT_AGENT_ID

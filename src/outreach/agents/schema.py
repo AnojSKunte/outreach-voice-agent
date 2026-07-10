@@ -141,8 +141,8 @@ class AgentConfig(BaseModel):
     @field_validator("profile")
     @classmethod
     def _check_profile(cls, v: str | None) -> str | None:
-        if v is not None and v not in ("premium", "budget"):
-            raise ValueError("profile must be 'premium' or 'budget'.")
+        if v is not None and v not in ("premium", "budget", "auto"):
+            raise ValueError("profile must be 'premium', 'budget' or 'auto'.")
         return v
 
     # ------------------------------------------------------------------
